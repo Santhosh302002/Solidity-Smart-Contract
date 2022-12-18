@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
+
+contract funding{
+    address public owner;
+    constructor(){
+        owner=msg.sender;
+    } 
+
+    uint public minvalue=50;
+    address[] public funder;
+    mapping(address => uint256) public amountpaid;
+    function fund() public payable{
+        funder.push(msg.sender);
+        amountpaid[msg.sender] = calvalue(msg.value);
+        require( calvalue(msg.value) >1e18,"Insufficient Amount");
+    }
+    
+    //0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e
+    function calvalue(uint256 sentamount) public view returns(uint256){
+        uint256 ethvalue=price();
+        uint finalvalue= (ethvalue * sentamount) / 1e18;
+        return finalvalue; 
+    }
+
+    function price() public view returns(uint256){
+        AggregatorV3Interface aggregatorV3Interface =AggregatorV3Interface(0xD4a33860578De61DBAbDc8BFdb98FD742fA7028e);
+        (,int price,,,)=aggregatorV3Interface.latestRoundData();
+        return uint256(price * 1e10);
+    }
+    function withdraw() public {
+        require(owner == msg.sender,"your not ower");
+        for(uint256 index;index<funder.length;index++)
+        {
+           amountpaid[funder[index]]=0;
+        }
+        (bool successful,)=payable(msg.sender).call{value: address(this).balance}("");
+        require(successful,"Unsuccessful");
+    }
+    
+}
